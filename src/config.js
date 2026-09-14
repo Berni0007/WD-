@@ -13,9 +13,16 @@ export function discordToken() {
   );
 }
 
+export function steamApiKey() {
+  return clean(process.env.STEAM_API_KEY);
+}
+
+export function appId() {
+  return clean(process.env.WARDOGS_APP_ID || "1867240");
+}
+
 export function publicUrl() {
-  // На Bothost DOMAIN — штатный домен веб-приложения. Используем его первым,
-  // чтобы случайно не подставить URL картинки/баннера в кнопку подключения.
+  // На Bothost DOMAIN — штатный домен веб-приложения.
   const raw = clean(process.env.DOMAIN || process.env.PUBLIC_URL);
   if (raw) {
     const url = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
@@ -53,6 +60,7 @@ export function getServers() {
 
   for (let i = 1; i <= MAX_SERVERS; i += 1) {
     const name = clean(process.env[`SERVER_${i}_NAME`]);
+    const query = clean(process.env[`SERVER_${i}_QUERY`]);
     const gameId = clean(process.env[`SERVER_${i}_GAME_ID`] || process.env[`SERVER_${i}_ID`]);
     const joinUrl = clean(process.env[`SERVER_${i}_JOIN_URL`]);
 
@@ -66,13 +74,14 @@ export function getServers() {
     const enabledRaw = clean(process.env[`SERVER_${i}_ENABLED`]);
     const enabled = enabledRaw
       ? enabledRaw !== "0"
-      : Boolean(name || gameId || joinUrl || address);
+      : Boolean(name || query || gameId || joinUrl || address);
 
     if (!enabled) continue;
 
     servers.push({
       id: String(i),
       name: name || `ZARUBA ${i}`,
+      query: query || name,
       gameId,
       address,
       envJoinUrl: joinUrl,
@@ -80,7 +89,14 @@ export function getServers() {
   }
 
   if (servers.length === 0) {
-    servers.push({ id: "1", name: "ZARUBA", gameId: "", address: "", envJoinUrl: "" });
+    servers.push({
+      id: "1",
+      name: "ZARUBA",
+      query: "ZARUBA",
+      gameId: "",
+      address: "",
+      envJoinUrl: "",
+    });
   }
 
   return servers;
