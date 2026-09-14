@@ -3,11 +3,10 @@
   "version": "2.0.0",
   "private": true,
   "type": "module",
-  "description": "Минимальный Discord -> Steam/WARDOGS join service для ZARUBA",
+  "description": "ZARUBA: Discord link -> Steam lobby -> WARDOGS server",
   "main": "index.js",
   "scripts": {
-    "start": "node index.js",
-    "dev": "node --watch index.js"
+    "start": "node index.js"
   },
   "engines": {
     "node": ">=20"
