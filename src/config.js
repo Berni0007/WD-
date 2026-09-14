@@ -5,29 +5,21 @@ function clean(value) {
 }
 
 export function discordToken() {
-  return clean(process.env.DISCORD_TOKEN || process.env.BOT_TOKEN || process.env.TOKEN);
+  return clean(
+    process.env.DISCORD_BOT_TOKEN ||
+      process.env.DISCORD_TOKEN ||
+      process.env.BOT_TOKEN ||
+      process.env.TOKEN
+  );
 }
 
 export function publicUrl() {
-  const raw = clean(process.env.PUBLIC_URL || process.env.DOMAIN);
+  // На Bothost DOMAIN — штатный домен веб-приложения. Используем его первым,
+  // чтобы случайно не подставить URL картинки/баннера в кнопку подключения.
+  const raw = clean(process.env.DOMAIN || process.env.PUBLIC_URL);
   if (raw) {
     const url = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
     return url.replace(/\/$/, "");
-  }
-
-  const webhook = clean(process.env.WEBHOOK_URL);
-  if (webhook.startsWith("http")) {
-    try {
-      return new URL(webhook).origin;
-    } catch {
-      // ignore
-    }
-  }
-
-  const botId = clean(process.env.BOT_ID);
-  if (botId) {
-    const slug = botId.replace(/^bot[-_]/i, "").replace(/_/g, "-");
-    if (slug) return `https://bot-${slug}.bothost.tech`;
   }
 
   return "";
