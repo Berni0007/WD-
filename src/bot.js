@@ -7,29 +7,29 @@ import {
   Events,
   GatewayIntentBits,
 } from "discord.js";
-import { discordToken, getServer, publicUrl } from "./config.js";
+import { discordToken, publicUrl, serverConfig } from "./config.js";
 
 const TITLE = "ZARUBA · WARDOGS";
 
 function payload() {
-  const site = publicUrl();
-  const server = getServer();
+  const server = serverConfig();
+  const url = publicUrl();
   const embed = new EmbedBuilder()
     .setTitle(TITLE)
     .setDescription(`Нажми **Играть**, чтобы подключиться к **${server.name}**.`)
     .setColor(0xb51e24);
 
-  const components = [];
-  if (site) {
-    components.push(
-      new ActionRowBuilder().addComponents(
-        new ButtonBuilder()
-          .setLabel("Играть")
-          .setStyle(ButtonStyle.Link)
-          .setURL(`${site}/join`)
-      )
-    );
-  }
+  const components = url
+    ? [
+        new ActionRowBuilder().addComponents(
+          new ButtonBuilder()
+            .setLabel("Играть")
+            .setStyle(ButtonStyle.Link)
+            .setURL(`${url}/join`)
+        ),
+      ]
+    : [];
+
   return { embeds: [embed], components };
 }
 
@@ -60,10 +60,7 @@ export async function startBot() {
   const token = discordToken();
   if (!token) throw new Error("Не задан Discord Bot Token");
 
-  const client = new Client({
-    intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages],
-  });
-
+  const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages] });
   client.once(Events.ClientReady, async (ready) => {
     console.log(`Discord: ${ready.user.tag}`);
     try {
