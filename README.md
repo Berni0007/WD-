@@ -1,28 +1,25 @@
 # ZARUBA WARDOGS JOIN
 
-Минимальный сервис из исходного проекта.
+Из исходного проекта оставлена только цепочка подключения игрока:
 
-Делает только одно:
+**Discord -> /join -> RCON /v1/players -> Steam GetPlayerSummaries -> lobbysteamid -> steam://joinlobby -> WARDOGS**
 
-**Discord -> кнопка «Играть» -> HTTPS /join -> актуальный Steam Lobby ID -> steam://joinlobby -> WARDOGS.**
-
-Никакого `steam://connect/IP:PORT`, мониторинга, статистики и сервер-браузера.
+Никакого подключения через `steam://connect/IP:PORT` нет.
 
 ## Bothost
 
 Нужны переменные:
 
+- `PUBLIC_URL`
+- `DISCORD_BOT_TOKEN` или `DISCORD_TOKEN`
 - `DISCORD_CHANNEL_ID`
-- Discord Bot Token в поле Bothost
+- `GAME_APP_ID=1867240`
 - `STEAM_API_KEY`
-- `WARDOGS_APP_ID=1867240`
 - `SERVER_1_NAME`
-- `SERVER_1_QUERY`
 - `SERVER_1_GAME_ID`
+- `SERVER_1_QUERY`
+- `SERVER_1_RCON_HOST`
+- `SERVER_1_RCON_PORT`
+- `SERVER_1_RCON_PASSWORD`
 
-Для автоматического получения Lobby ID, как в исходном проекте, нужен один из источников SteamID игроков:
-
-- `SERVER_1_RCON_HOST`, `SERVER_1_RCON_PORT`, `SERVER_1_RCON_PASSWORD`
-- или `SERVER_1_SEEDS` со SteamID игроков.
-
-При запуске бот сам публикует/обновляет в `DISCORD_CHANNEL_ID` сообщение с кнопкой **Играть**.
+Запуск: `npm start`.
