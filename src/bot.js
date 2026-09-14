@@ -29,7 +29,7 @@ function payload() {
   return {
     content: joinUrl
       ? `**ZARUBA · WARDOGS**\nПодключение к **${server.name}**\n${joinUrl}`
-      : `**ZARUBA · WARDOGS**\nPUBLIC_URL не задан.`,
+      : "**ZARUBA · WARDOGS**\nВ Bothost не включён домен. Открой вкладку «Домен» и включи веб-домен для порта 3000.",
     embeds: [],
     components,
     attachments: [],
@@ -54,10 +54,10 @@ async function publish(client) {
 
   if (existing) {
     await existing.edit(payload());
-    console.log("Discord: ссылка обновлена без картинки");
+    console.log("Discord: ссылка обновлена");
   } else {
     await channel.send(payload());
-    console.log("Discord: ссылка опубликована без картинки");
+    console.log("Discord: ссылка опубликована");
   }
 }
 
