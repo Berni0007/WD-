@@ -12,6 +12,7 @@ import {
   getServers,
   httpJoinUrl,
   publicUrl,
+  steamApiKey,
   steamJoinUrl,
 } from "./config.js";
 
@@ -20,22 +21,28 @@ const PANEL_TITLE = "ZARUBA · WARDOGS";
 function invitePayload() {
   const servers = getServers().slice(0, 5);
   const site = publicUrl();
+  const steamConfigured = Boolean(steamApiKey());
 
   const embed = new EmbedBuilder()
     .setTitle(process.env.PANEL_TITLE || PANEL_TITLE)
-    .setDescription("Нажми кнопку **ПОДКЛЮЧИТЬСЯ** ниже — откроется Steam и WARDOGS.")
+    .setDescription("Нажми кнопку **ПОДКЛЮЧИТЬСЯ** ниже — сервис найдёт сервер и откроет Steam/WARDOGS.")
     .setColor(0xb51e24);
 
   for (const server of servers) {
     const lines = [];
     if (server.gameId) lines.push(`Server ID: **${server.gameId}**`);
+    if (server.query) lines.push(`Поиск: \`${server.query}\``);
     if (server.address) lines.push(`Адрес: \`${server.address}\``);
 
     const webUrl = httpJoinUrl(server);
     if (webUrl) lines.push(`Ссылка: ${webUrl}`);
 
-    if (!steamJoinUrl(server)) {
-      lines.push("⚠️ Для прямого входа нужно задать SERVER_1_ADDR=IP:PORT или SERVER_1_JOIN_URL.");
+    if (steamJoinUrl(server)) {
+      lines.push("✅ Прямой Steam-переход задан в настройках.");
+    } else if (steamConfigured) {
+      lines.push("✅ Steam API включён — адрес сервера определяется автоматически при клике.");
+    } else {
+      lines.push("⚠️ Не задан STEAM_API_KEY и нет прямого IP:PORT.");
     }
 
     embed.addFields({
