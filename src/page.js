@@ -6,41 +6,53 @@ function esc(value) {
     .replaceAll('"', "&quot;");
 }
 
-export function joinPage({ serverName, gameId, address, steamUrl }) {
-  const ready = Boolean(steamUrl);
-  const safeUrl = esc(steamUrl);
-  const safeName = esc(serverName || "ZARUBA");
-  const safeGameId = esc(gameId);
-  const safeAddress = esc(address);
+export function joinPage(result) {
+  const ready = Boolean(result?.ok && result?.steamUrl);
+  const name = result?.server?.name || "ZARUBA";
+  const steamUrl = result?.steamUrl || "";
 
   return `<!doctype html>
 <html lang="ru">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta http-equiv="Cache-Control" content="no-store">
-  <title>${safeName}</title>
+  ${ready ? `<meta http-equiv="refresh" content="0;url=${esc(steamUrl)}">` : ""}
+  <title>${esc(name)}</title>
   <style>
-    *{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;background:#090b0e;color:#f5f5f5;font-family:Arial,Segoe UI,sans-serif;padding:20px}
-    main{width:min(540px,100%);background:#11151a;border:1px solid #282f37;border-radius:16px;padding:34px;text-align:center}
-    h1{margin:0 0 10px;font-size:28px}p{margin:0 0 16px;color:#aeb6c0;line-height:1.5}
-    .id{font-size:18px;color:#fff;margin-bottom:18px}.id b{color:#e5b95c}
-    a{display:inline-block;padding:14px 26px;border-radius:10px;background:#b51e24;color:white;text-decoration:none;font-weight:800;font-size:17px}
-    .bad{color:#ffb4b4}.small{font-size:13px;margin-top:18px;margin-bottom:0;color:#747e89}code{color:#d9dee5}
+    *{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;background:#0b0d11;color:#fff;font-family:Segoe UI,Arial,sans-serif;padding:20px}
+    main{text-align:center;max-width:520px}h1{margin:0 0 14px}p{color:#aeb6c0;line-height:1.5}a{display:inline-block;margin-top:10px;padding:13px 24px;border-radius:9px;background:#16a34a;color:#fff;text-decoration:none;font-weight:700}a[hidden]{display:none}
   </style>
 </head>
 <body>
-  <main>
-    <h1>${safeName}</h1>
-    ${safeGameId ? `<p class="id">Server ID: <b>${safeGameId}</b></p>` : ""}
-    ${ready
-      ? `<p>Открываем Steam и подключаем к серверу WARDOGS.</p><a id="join" href="${safeUrl}">ПОДКЛЮЧИТЬСЯ</a><p class="small">Если Steam не открылся автоматически — нажми кнопку ещё раз.${safeAddress ? ` Адрес: <code>${safeAddress}</code>` : ""}</p>`
-      : `<p class="bad">Автоматическое подключение пока не настроено.</p>${safeGameId ? `<p>Открой WARDOGS → <b>Join by ID</b> → введи <b>${safeGameId}</b>.</p>` : ""}`}
-  </main>
-  ${ready ? `<script>
-    const url=${JSON.stringify(steamUrl)};
-    window.location.href=url;
-  </script>` : ""}
+<main>
+  <h1>${esc(name)}</h1>
+  <p id="status">${ready ? "Открываем WARDOGS…" : "Получаем ссылку подключения…"}</p>
+  <a id="play" href="${esc(steamUrl)}" ${ready ? "" : "hidden"}>Играть</a>
+</main>
+<script>
+  const play=document.getElementById("play");
+  const statusEl=document.getElementById("status");
+  let launched=false;
+  function launch(url){
+    if(!url)return;
+    play.href=url; play.hidden=false; statusEl.textContent="Открываем WARDOGS…";
+    if(launched)return; launched=true;
+    const frame=document.createElement("iframe"); frame.style.display="none"; frame.src=url; document.body.appendChild(frame);
+    location.href=url;
+  }
+  async function poll(){
+    if(launched)return;
+    try{
+      const res=await fetch("/api/wardogs/join-link",{cache:"no-store"});
+      const data=await res.json();
+      if(data.steamUrl){launch(data.steamUrl);return;}
+      statusEl.textContent="Ждём Steam-лобби сервера…";
+    }catch{statusEl.textContent="Нет связи. Повторяем…";}
+    setTimeout(poll,2000);
+  }
+  ${ready ? `launch(${JSON.stringify(steamUrl)});` : "poll();"}
+</script>
 </body>
 </html>`;
 }
