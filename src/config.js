@@ -5,15 +5,7 @@ function clean(value) {
 }
 
 export function discordToken() {
-  return clean(
-    process.env.DISCORD_TOKEN ||
-      process.env.BOT_TOKEN ||
-      process.env.TOKEN
-  );
-}
-
-export function appId() {
-  return clean(process.env.WARDOGS_APP_ID || "1867240");
+  return clean(process.env.DISCORD_TOKEN || process.env.BOT_TOKEN || process.env.TOKEN);
 }
 
 export function publicUrl() {
@@ -41,34 +33,13 @@ export function publicUrl() {
   return "";
 }
 
-export function getServers() {
-  const servers = [];
+function normalizeAddress(value) {
+  let raw = clean(value);
+  if (!raw) return "";
+  raw = raw.replace(/^steam:\/\/connect\//i, "").replace(/\/$/, "");
 
-  for (let i = 1; i <= MAX_SERVERS; i += 1) {
-    const name = clean(process.env[`SERVER_${i}_NAME`]);
-    const joinUrl = clean(process.env[`SERVER_${i}_JOIN_URL`]);
-    const enabledRaw = clean(process.env[`SERVER_${i}_ENABLED`]);
-    const enabled = enabledRaw ? enabledRaw !== "0" : Boolean(name || joinUrl);
-
-    if (!enabled) continue;
-
-    servers.push({
-      id: String(i),
-      name: name || `ZARUBA ${i}`,
-      envJoinUrl: joinUrl,
-    });
-  }
-
-  if (servers.length === 0) {
-    servers.push({ id: "1", name: "ZARUBA", envJoinUrl: "" });
-  }
-
-  return servers;
-}
-
-export function getServer(id) {
-  const key = clean(id).replace(/\D+/g, "");
-  return getServers().find((server) => server.id === key) || null;
+  if (/^(?:[a-z0-9.-]+|\[[0-9a-f:]+\]):\d{1,5}$/i.test(raw)) return raw;
+  return "";
 }
 
 export function normalizeJoinValue(value) {
@@ -79,14 +50,67 @@ export function normalizeJoinValue(value) {
     return raw.replace(/\/$/, "");
   }
 
-  if (/^steam:\/\/connect\/[a-z0-9_.:-]+$/i.test(raw)) {
-    return raw;
-  }
-
-  // Если админ вставил только Lobby ID, собираем ссылку для WARDOGS.
-  if (/^\d{5,}$/.test(raw)) {
-    return `steam://joinlobby/${appId()}/${raw}`;
-  }
+  const address = normalizeAddress(raw);
+  if (address) return `steam://connect/${address}`;
 
   return "";
+}
+
+export function getServers() {
+  const servers = [];
+
+  for (let i = 1; i <= MAX_SERVERS; i += 1) {
+    const name = clean(process.env[`SERVER_${i}_NAME`]);
+    const gameId = clean(process.env[`SERVER_${i}_GAME_ID`] || process.env[`SERVER_${i}_ID`]);
+    const joinUrl = clean(process.env[`SERVER_${i}_JOIN_URL`]);
+
+    const host = clean(process.env[`SERVER_${i}_HOST`] || process.env[`SERVER_${i}_IP`]);
+    const port = clean(process.env[`SERVER_${i}_PORT`]);
+    const explicitAddress = clean(
+      process.env[`SERVER_${i}_ADDR`] || process.env[`SERVER_${i}_ADDRESS`]
+    );
+    const address = normalizeAddress(explicitAddress || (host && port ? `${host}:${port}` : ""));
+
+    const enabledRaw = clean(process.env[`SERVER_${i}_ENABLED`]);
+    const enabled = enabledRaw
+      ? enabledRaw !== "0"
+      : Boolean(name || gameId || joinUrl || address);
+
+    if (!enabled) continue;
+
+    servers.push({
+      id: String(i),
+      name: name || `ZARUBA ${i}`,
+      gameId,
+      address,
+      envJoinUrl: joinUrl,
+    });
+  }
+
+  if (servers.length === 0) {
+    servers.push({ id: "1", name: "ZARUBA", gameId: "", address: "", envJoinUrl: "" });
+  }
+
+  return servers;
+}
+
+export function getServer(id) {
+  const key = clean(id).replace(/\D+/g, "");
+  return getServers().find((server) => server.id === key) || null;
+}
+
+export function steamJoinUrl(server) {
+  if (!server) return "";
+
+  const explicit = normalizeJoinValue(server.envJoinUrl);
+  if (explicit) return explicit;
+
+  if (server.address) return `steam://connect/${server.address}`;
+  return "";
+}
+
+export function httpJoinUrl(server) {
+  const site = publicUrl();
+  if (!site || !server) return "";
+  return `${site}/join/${encodeURIComponent(server.id)}`;
 }
