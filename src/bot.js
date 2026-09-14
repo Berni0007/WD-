@@ -23,13 +23,8 @@ function invitePayload() {
 
   const embed = new EmbedBuilder()
     .setTitle(process.env.PANEL_TITLE || PANEL_TITLE)
-    .setDescription(
-      "Нажми **ПОДКЛЮЧИТЬСЯ** — откроется страница ZARUBA для входа на сервер WARDOGS."
-    )
+    .setDescription("Нажми кнопку **ПОДКЛЮЧИТЬСЯ** ниже — откроется Steam и WARDOGS.")
     .setColor(0xb51e24);
-
-  const banner = String(process.env.PANEL_BANNER_URL || "").trim();
-  if (banner.startsWith("http")) embed.setImage(banner);
 
   for (const server of servers) {
     const lines = [];
@@ -37,10 +32,10 @@ function invitePayload() {
     if (server.address) lines.push(`Адрес: \`${server.address}\``);
 
     const webUrl = httpJoinUrl(server);
-    if (webUrl) lines.push(`[Открыть страницу подключения](${webUrl})`);
+    if (webUrl) lines.push(`Ссылка: ${webUrl}`);
 
     if (!steamJoinUrl(server)) {
-      lines.push("Если прямой Steam-переход не задан, используй Server ID через **Join by ID** в игре.");
+      lines.push("⚠️ Для прямого входа нужно задать SERVER_1_ADDR=IP:PORT или SERVER_1_JOIN_URL.");
     }
 
     embed.addFields({
@@ -66,7 +61,7 @@ function invitePayload() {
   return {
     content: site
       ? "**Подключение к серверу ZARUBA:**"
-      : "⚠️ Не задан PUBLIC_URL — кнопка подключения пока недоступна.",
+      : "⚠️ На Bothost не назначен DOMAIN — кнопка подключения недоступна.",
     embeds: [embed],
     components: row.components.length ? [row] : [],
   };
@@ -74,9 +69,7 @@ function invitePayload() {
 
 async function publishInvite(client) {
   const channelId = String(process.env.DISCORD_CHANNEL_ID || "").trim();
-  if (!channelId) {
-    throw new Error("Не задан DISCORD_CHANNEL_ID");
-  }
+  if (!channelId) throw new Error("Не задан DISCORD_CHANNEL_ID");
 
   const channel = await client.channels.fetch(channelId).catch(() => null);
   if (!channel?.isTextBased() || typeof channel.send !== "function") {
@@ -85,7 +78,6 @@ async function publishInvite(client) {
 
   const payload = invitePayload();
 
-  // При рестарте Bothost обновляем прежнее сообщение, чтобы не плодить дубликаты.
   try {
     const recent = await channel.messages.fetch({ limit: 30 });
     const existing = recent.find(
