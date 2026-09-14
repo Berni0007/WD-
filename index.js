@@ -1,13 +1,13 @@
 import "dotenv/config";
+import { startBot } from "./src/bot.js";
 import { startWeb } from "./src/web.js";
-import { startDiscordBot } from "./src/bot.js";
 
 async function main() {
   await startWeb();
-  await startDiscordBot();
+  await startBot();
 }
 
 main().catch((error) => {
-  console.error("ZARUBA JOIN не запустился:", error);
+  console.error("ZARUBA JOIN:", error);
   process.exit(1);
 });
