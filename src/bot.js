@@ -3,34 +3,37 @@ import {
   ButtonBuilder,
   ButtonStyle,
   Client,
-  EmbedBuilder,
   Events,
   GatewayIntentBits,
 } from "discord.js";
 import { discordToken, publicUrl, serverConfig } from "./config.js";
 
-const TITLE = "ZARUBA · WARDOGS";
+const OLD_TITLE = "ZARUBA · WARDOGS";
 
 function payload() {
   const server = serverConfig();
   const url = publicUrl();
-  const embed = new EmbedBuilder()
-    .setTitle(TITLE)
-    .setDescription(`Нажми **Играть**, чтобы подключиться к **${server.name}**.`)
-    .setColor(0xb51e24);
+  const joinUrl = url ? `${url}/join` : "";
 
-  const components = url
+  const components = joinUrl
     ? [
         new ActionRowBuilder().addComponents(
           new ButtonBuilder()
-            .setLabel("Играть")
+            .setLabel("ИГРАТЬ")
             .setStyle(ButtonStyle.Link)
-            .setURL(`${url}/join`)
+            .setURL(joinUrl)
         ),
       ]
     : [];
 
-  return { embeds: [embed], components };
+  return {
+    content: joinUrl
+      ? `**ZARUBA · WARDOGS**\nПодключение к **${server.name}**\n${joinUrl}`
+      : `**ZARUBA · WARDOGS**\nPUBLIC_URL не задан.`,
+    embeds: [],
+    components,
+    attachments: [],
+  };
 }
 
 async function publish(client) {
@@ -42,17 +45,19 @@ async function publish(client) {
     throw new Error("Discord-канал не найден или бот не может писать");
   }
 
-  const recent = await channel.messages.fetch({ limit: 30 }).catch(() => null);
-  const existing = recent?.find(
-    (message) => message.author?.id === client.user.id && message.embeds?.[0]?.title === TITLE
-  );
+  const recent = await channel.messages.fetch({ limit: 50 }).catch(() => null);
+  const existing = recent?.find((message) => {
+    if (message.author?.id !== client.user.id) return false;
+    if (message.embeds?.some((embed) => embed.title === OLD_TITLE)) return true;
+    return String(message.content || "").includes("ZARUBA · WARDOGS");
+  });
 
   if (existing) {
     await existing.edit(payload());
-    console.log("Discord: ссылка обновлена");
+    console.log("Discord: ссылка обновлена без картинки");
   } else {
     await channel.send(payload());
-    console.log("Discord: ссылка опубликована");
+    console.log("Discord: ссылка опубликована без картинки");
   }
 }
 
@@ -60,7 +65,10 @@ export async function startBot() {
   const token = discordToken();
   if (!token) throw new Error("Не задан Discord Bot Token");
 
-  const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages] });
+  const client = new Client({
+    intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages],
+  });
+
   client.once(Events.ClientReady, async (ready) => {
     console.log(`Discord: ${ready.user.tag}`);
     try {
