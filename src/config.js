@@ -11,21 +11,17 @@ export function discordToken() {
   );
 }
 
-function normalizeWebUrl(value) {
+function normalizeDomain(value) {
   const raw = clean(value);
   if (!raw) return "";
-
-  const url = (/^https?:\/\//i.test(raw) ? raw : `https://${raw}`).replace(/\/$/, "");
-
-  // PUBLIC_URL должен быть адресом веб-приложения, а не ссылкой на картинку.
-  if (/\.(?:png|jpe?g|gif|webp|svg)(?:\?.*)?$/i.test(url)) return "";
-
-  return url;
+  const url = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
+  return url.replace(/\/$/, "");
 }
 
 export function publicUrl() {
-  // На Bothost сначала используем штатный DOMAIN.
-  return normalizeWebUrl(process.env.DOMAIN) || normalizeWebUrl(process.env.PUBLIC_URL);
+  // На Bothost реальный публичный адрес должен приходить из системного DOMAIN.
+  // PUBLIC_URL намеренно не используем, чтобы не отправлять устаревшие/неверные ссылки.
+  return normalizeDomain(process.env.DOMAIN);
 }
 
 export function steamApiKey() {
