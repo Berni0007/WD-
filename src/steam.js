@@ -6,10 +6,9 @@ export async function fetchPlayerSummaries(apiKey, steamIds) {
 
   const players = [];
   for (let i = 0; i < unique.length; i += 100) {
-    const group = unique.slice(i, i + 100);
     const url = new URL(SUMMARIES_URL);
     url.searchParams.set("key", apiKey);
-    url.searchParams.set("steamids", group.join(","));
+    url.searchParams.set("steamids", unique.slice(i, i + 100).join(","));
 
     const response = await fetch(url, { signal: AbortSignal.timeout(8000) });
     if (!response.ok) throw new Error(`Steam API ${response.status}`);
@@ -28,7 +27,6 @@ export function lobbyFromSummary(player, expectedAppId) {
     steamId: String(player.steamid),
     lobbyId: String(player.lobbysteamid),
     appId: String(player.gameid || expectedAppId),
-    persona: String(player.personaname || ""),
   };
 }
 
