@@ -1,8 +1,7 @@
-import { getServer, steamApiKey, wardogsAppId } from "./config.js";
+import { getServer, staleAfterMs, steamApiKey, wardogsAppId } from "./config.js";
 import { fetchRconPlayers } from "./rcon.js";
 import { fetchPlayerSummaries, lobbyFromSummary, toSteamJoinUrl } from "./steam.js";
 
-const CACHE_MS = 30_000;
 let cached = null;
 let cachedAt = 0;
 let busy = null;
@@ -10,6 +9,17 @@ let busy = null;
 function validSteamId(value) {
   const id = String(value || "");
   return /^7656119\d{10}$/.test(id) ? id : "";
+}
+
+function cachedResult(server) {
+  if (!cached || Date.now() - cachedAt >= staleAfterMs()) return null;
+  return {
+    ok: true,
+    reason: "cached",
+    server,
+    lobby: cached,
+    steamUrl: toSteamJoinUrl(cached),
+  };
 }
 
 async function resolveNow() {
@@ -30,40 +40,36 @@ async function resolveNow() {
       }
     } catch (error) {
       console.error("RCON players:", error.message);
+      const old = cachedResult(server);
+      if (old) return old;
     }
   }
 
   if (ids.size === 0) {
-    return { ok: false, reason: "no-players", server };
+    return cachedResult(server) || { ok: false, reason: "no-players", server };
   }
 
-  const summaries = await fetchPlayerSummaries(apiKey, [...ids]);
-  for (const player of summaries) {
-    const lobby = lobbyFromSummary(player, appId);
-    if (!lobby) continue;
+  try {
+    const summaries = await fetchPlayerSummaries(apiKey, [...ids]);
+    for (const player of summaries) {
+      const lobby = lobbyFromSummary(player, appId);
+      if (!lobby) continue;
 
-    cached = lobby;
-    cachedAt = Date.now();
-    return {
-      ok: true,
-      reason: "ready",
-      server,
-      lobby,
-      steamUrl: toSteamJoinUrl(lobby),
-    };
+      cached = lobby;
+      cachedAt = Date.now();
+      return {
+        ok: true,
+        reason: "ready",
+        server,
+        lobby,
+        steamUrl: toSteamJoinUrl(lobby),
+      };
+    }
+  } catch (error) {
+    console.error("Steam API:", error.message);
   }
 
-  if (cached && Date.now() - cachedAt < CACHE_MS) {
-    return {
-      ok: true,
-      reason: "cached",
-      server,
-      lobby: cached,
-      steamUrl: toSteamJoinUrl(cached),
-    };
-  }
-
-  return { ok: false, reason: "nolobby", server };
+  return cachedResult(server) || { ok: false, reason: "nolobby", server };
 }
 
 export async function liveJoin() {
