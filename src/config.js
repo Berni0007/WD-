@@ -22,13 +22,11 @@ export function appId() {
 }
 
 export function publicUrl() {
-  // На Bothost DOMAIN — штатный домен веб-приложения.
   const raw = clean(process.env.DOMAIN || process.env.PUBLIC_URL);
   if (raw) {
     const url = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
     return url.replace(/\/$/, "");
   }
-
   return "";
 }
 
@@ -69,7 +67,12 @@ export function getServers() {
     const explicitAddress = clean(
       process.env[`SERVER_${i}_ADDR`] || process.env[`SERVER_${i}_ADDRESS`]
     );
-    const address = normalizeAddress(explicitAddress || (host && port ? `${host}:${port}` : ""));
+
+    // Боевой адрес ZARUBA #1. ENV имеет приоритет, чтобы его можно было сменить без правки кода.
+    const defaultAddress = i === 1 ? "51.83.166.16:7778" : "";
+    const address = normalizeAddress(
+      explicitAddress || (host && port ? `${host}:${port}` : "") || defaultAddress
+    );
 
     const enabledRaw = clean(process.env[`SERVER_${i}_ENABLED`]);
     const enabled = enabledRaw
@@ -80,8 +83,8 @@ export function getServers() {
 
     servers.push({
       id: String(i),
-      name: name || `ZARUBA ${i}`,
-      query: query || name,
+      name: name || (i === 1 ? "ZARUBA" : `ZARUBA ${i}`),
+      query: query || name || (i === 1 ? "#1 [RU] WARDOGS RUSSIA" : ""),
       gameId,
       address,
       envJoinUrl: joinUrl,
@@ -92,9 +95,9 @@ export function getServers() {
     servers.push({
       id: "1",
       name: "ZARUBA",
-      query: "ZARUBA",
+      query: "#1 [RU] WARDOGS RUSSIA",
       gameId: "",
-      address: "",
+      address: "51.83.166.16:7778",
       envJoinUrl: "",
     });
   }
