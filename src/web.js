@@ -1,6 +1,5 @@
 import express from "express";
-import { getServer, publicUrl } from "./config.js";
-import { getJoinUrl } from "./store.js";
+import { getServer, publicUrl, steamJoinUrl } from "./config.js";
 import { joinPage } from "./page.js";
 
 export function createApp() {
@@ -22,12 +21,19 @@ export function createApp() {
       return;
     }
 
-    const steamUrl = getJoinUrl(server.id);
+    const steamUrl = steamJoinUrl(server);
     res
-      .status(steamUrl ? 200 : 503)
+      .status(200)
       .set("Cache-Control", "no-store")
       .type("html")
-      .send(joinPage({ serverName: server.name, steamUrl }));
+      .send(
+        joinPage({
+          serverName: server.name,
+          gameId: server.gameId,
+          address: server.address,
+          steamUrl,
+        })
+      );
   });
 
   return app;
