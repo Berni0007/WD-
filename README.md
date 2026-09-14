@@ -1,36 +1,28 @@
 # ZARUBA WARDOGS JOIN
 
-Минимальный сервис. Делает только одно:
+Минимальный сервис из исходного проекта.
 
-**Discord -> кнопка сервера -> HTTPS страница -> Steam -> WARDOGS -> подключение.**
+Делает только одно:
+
+**Discord -> кнопка «Играть» -> HTTPS /join -> актуальный Steam Lobby ID -> steam://joinlobby -> WARDOGS.**
+
+Никакого `steam://connect/IP:PORT`, мониторинга, статистики и сервер-браузера.
 
 ## Bothost
 
-- Платформа: Discord
-- Язык: Node.js
-- Локация: Нидерланды
-- Точка запуска: `npm start`
-- Web: приложение слушает `0.0.0.0:$PORT`
+Нужны переменные:
 
-## Настройка
-
-Минимально нужны:
-
-- токен Discord (`DISCORD_TOKEN` или `BOT_TOKEN`)
-- `PUBLIC_URL` — HTTPS адрес приложения
+- `DISCORD_CHANNEL_ID`
+- Discord Bot Token в поле Bothost
+- `STEAM_API_KEY`
+- `WARDOGS_APP_ID=1867240`
 - `SERVER_1_NAME`
-- `SERVER_1_JOIN_URL` — например полная `steam://joinlobby/...`
+- `SERVER_1_QUERY`
+- `SERVER_1_GAME_ID`
 
-Вместо ENV ссылку можно задавать после запуска командой `/ссылка`.
-Команды `/панель`, `/ссылка`, `/сброс-ссылки` доступны только пользователям с Manage Server / Administrator.
+Для автоматического получения Lobby ID, как в исходном проекте, нужен один из источников SteamID игроков:
 
-## Discord
+- `SERVER_1_RCON_HOST`, `SERVER_1_RCON_PORT`, `SERVER_1_RCON_PASSWORD`
+- или `SERVER_1_SEEDS` со SteamID игроков.
 
-В канале выполнить `/панель`. Бот создаст сообщение с кнопкой «ZARUBA».
-Кнопка всегда ведёт на HTTPS адрес сервиса, потому что Discord не разрешает `steam://` в Link-кнопках.
-Страница сразу пытается открыть Steam и оставляет резервную кнопку «Открыть Steam».
-
-## Проверка
-
-- `GET /health` -> `{ "ok": true }`
-- `GET /join/1` -> страница перехода на SERVER_1
+При запуске бот сам публикует/обновляет в `DISCORD_CHANNEL_ID` сообщение с кнопкой **Играть**.
