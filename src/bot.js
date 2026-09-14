@@ -4,169 +4,125 @@ import {
   ButtonStyle,
   Client,
   EmbedBuilder,
+  Events,
   GatewayIntentBits,
-  PermissionFlagsBits,
-  REST,
-  Routes,
-  SlashCommandBuilder,
 } from "discord.js";
-import { discordToken, getServer, getServers, publicUrl } from "./config.js";
-import { clearJoinUrl, getJoinUrl, setJoinUrl } from "./store.js";
+import {
+  discordToken,
+  getServers,
+  httpJoinUrl,
+  publicUrl,
+  steamJoinUrl,
+} from "./config.js";
 
-function isAdmin(interaction) {
-  return interaction.memberPermissions?.has(PermissionFlagsBits.ManageGuild) ||
-    interaction.memberPermissions?.has(PermissionFlagsBits.Administrator);
-}
+const PANEL_TITLE = "ZARUBA · WARDOGS";
 
-function panelPayload() {
+function invitePayload() {
+  const servers = getServers().slice(0, 5);
   const site = publicUrl();
-  const servers = getServers();
 
   const embed = new EmbedBuilder()
-    .setTitle(process.env.PANEL_TITLE || "ZARUBA · WARDOGS")
-    .setDescription("Выбери сервер и нажми **Играть**. Steam откроет WARDOGS и выполнит подключение.")
+    .setTitle(process.env.PANEL_TITLE || PANEL_TITLE)
+    .setDescription(
+      "Нажми **ПОДКЛЮЧИТЬСЯ** — откроется страница ZARUBA для входа на сервер WARDOGS."
+    )
     .setColor(0xb51e24);
 
   const banner = String(process.env.PANEL_BANNER_URL || "").trim();
   if (banner.startsWith("http")) embed.setImage(banner);
 
-  const row = new ActionRowBuilder();
-  for (const server of servers.slice(0, 5)) {
-    const hasLink = Boolean(getJoinUrl(server.id));
-    if (site) {
-      row.addComponents(
-        new ButtonBuilder()
-          .setLabel(server.name)
-          .setStyle(ButtonStyle.Link)
-          .setURL(`${site}/join/${encodeURIComponent(server.id)}`)
-      );
-    } else {
-      row.addComponents(
-        new ButtonBuilder()
-          .setCustomId(`join:${server.id}`)
-          .setLabel(server.name)
-          .setStyle(hasLink ? ButtonStyle.Success : ButtonStyle.Secondary)
-          .setDisabled(!hasLink)
-      );
+  for (const server of servers) {
+    const lines = [];
+    if (server.gameId) lines.push(`Server ID: **${server.gameId}**`);
+    if (server.address) lines.push(`Адрес: \`${server.address}\``);
+
+    const webUrl = httpJoinUrl(server);
+    if (webUrl) lines.push(`[Открыть страницу подключения](${webUrl})`);
+
+    if (!steamJoinUrl(server)) {
+      lines.push("Если прямой Steam-переход не задан, используй Server ID через **Join by ID** в игре.");
     }
+
+    embed.addFields({
+      name: server.name,
+      value: lines.join("\n") || "Сервер настроен",
+      inline: false,
+    });
   }
 
-  return { embeds: [embed], components: row.components.length ? [row] : [] };
+  const row = new ActionRowBuilder();
+  for (const server of servers) {
+    const url = httpJoinUrl(server);
+    if (!url) continue;
+
+    row.addComponents(
+      new ButtonBuilder()
+        .setLabel(servers.length === 1 ? "ПОДКЛЮЧИТЬСЯ" : server.name.slice(0, 80))
+        .setStyle(ButtonStyle.Link)
+        .setURL(url)
+    );
+  }
+
+  return {
+    content: site
+      ? "**Подключение к серверу ZARUBA:**"
+      : "⚠️ Не задан PUBLIC_URL — кнопка подключения пока недоступна.",
+    embeds: [embed],
+    components: row.components.length ? [row] : [],
+  };
 }
 
-function serverChoices() {
-  return getServers().map((server) => ({ name: server.name, value: server.id }));
-}
+async function publishInvite(client) {
+  const channelId = String(process.env.DISCORD_CHANNEL_ID || "").trim();
+  if (!channelId) {
+    throw new Error("Не задан DISCORD_CHANNEL_ID");
+  }
 
-async function registerCommands(client, token) {
-  const commands = [
-    new SlashCommandBuilder()
-      .setName("панель")
-      .setDescription("Создать панель подключения ZARUBA")
-      .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
-      .toJSON(),
-    new SlashCommandBuilder()
-      .setName("ссылка")
-      .setDescription("Задать ссылку подключения к серверу")
-      .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
-      .addStringOption((option) =>
-        option.setName("сервер").setDescription("Сервер").setRequired(true).addChoices(...serverChoices())
-      )
-      .addStringOption((option) =>
-        option.setName("значение").setDescription("steam://joinlobby/... или Lobby ID").setRequired(true)
-      )
-      .toJSON(),
-    new SlashCommandBuilder()
-      .setName("сброс-ссылки")
-      .setDescription("Удалить сохранённую ссылку и вернуться к ENV")
-      .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
-      .addStringOption((option) =>
-        option.setName("сервер").setDescription("Сервер").setRequired(true).addChoices(...serverChoices())
-      )
-      .toJSON(),
-  ];
+  const channel = await client.channels.fetch(channelId).catch(() => null);
+  if (!channel?.isTextBased() || typeof channel.send !== "function") {
+    throw new Error(`Канал ${channelId} не найден или бот не может писать в него`);
+  }
 
-  const rest = new REST({ version: "10" }).setToken(token);
-  const guildId = String(process.env.DISCORD_GUILD_ID || "").trim();
-  const route = guildId
-    ? Routes.applicationGuildCommands(client.user.id, guildId)
-    : Routes.applicationCommands(client.user.id);
-  await rest.put(route, { body: commands });
+  const payload = invitePayload();
+
+  // При рестарте Bothost обновляем прежнее сообщение, чтобы не плодить дубликаты.
+  try {
+    const recent = await channel.messages.fetch({ limit: 30 });
+    const existing = recent.find(
+      (message) =>
+        message.author?.id === client.user.id &&
+        message.embeds?.some(
+          (embed) => embed.title === (process.env.PANEL_TITLE || PANEL_TITLE)
+        )
+    );
+
+    if (existing) {
+      await existing.edit(payload);
+      console.log(`Discord: приглашение обновлено в канале ${channelId}`);
+      return;
+    }
+  } catch (error) {
+    console.log(`Discord: не удалось прочитать историю канала (${error.message})`);
+  }
+
+  await channel.send(payload);
+  console.log(`Discord: приглашение опубликовано в канале ${channelId}`);
 }
 
 export async function startDiscordBot() {
   const token = discordToken();
-  if (!token) {
-    console.log("Discord: токен не найден, web-сервис продолжает работать.");
-    return null;
-  }
+  if (!token) throw new Error("Не задан Discord Bot Token");
 
-  const client = new Client({ intents: [GatewayIntentBits.Guilds] });
-
-  client.once("ready", async () => {
-    console.log(`Discord: ${client.user.tag}`);
-    try {
-      await registerCommands(client, token);
-      console.log("Discord commands: OK");
-    } catch (error) {
-      console.error("Не удалось зарегистрировать Discord-команды:", error.message);
-    }
-
-    const channelId = String(process.env.DISCORD_CHANNEL_ID || "").trim();
-    if (channelId && process.env.AUTO_POST_PANEL === "1") {
-      const channel = await client.channels.fetch(channelId).catch(() => null);
-      if (channel?.isTextBased()) await channel.send(panelPayload());
-    }
+  const client = new Client({
+    intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages],
   });
 
-  client.on("interactionCreate", async (interaction) => {
-    if (interaction.isButton() && interaction.customId.startsWith("join:")) {
-      const server = getServer(interaction.customId.slice(5));
-      const steamUrl = server ? getJoinUrl(server.id) : "";
-      if (!steamUrl) {
-        await interaction.reply({ ephemeral: true, content: "Ссылка подключения ещё не задана." });
-        return;
-      }
-      await interaction.reply({ ephemeral: true, content: steamUrl });
-      return;
-    }
-
-    if (!interaction.isChatInputCommand()) return;
-    if (!isAdmin(interaction)) {
-      await interaction.reply({ ephemeral: true, content: "Недостаточно прав." });
-      return;
-    }
-
-    if (interaction.commandName === "панель") {
-      await interaction.reply({ ephemeral: true, content: "Панель создана." });
-      await interaction.channel.send(panelPayload());
-      return;
-    }
-
-    if (interaction.commandName === "ссылка") {
-      const serverId = interaction.options.getString("сервер");
-      const value = interaction.options.getString("значение");
-      const server = getServer(serverId);
-      if (!server || !setJoinUrl(serverId, value)) {
-        await interaction.reply({
-          ephemeral: true,
-          content: "Неверная ссылка. Используй `steam://joinlobby/...`, `steam://connect/IP:PORT` или только Lobby ID.",
-        });
-        return;
-      }
-      await interaction.reply({ ephemeral: true, content: `Ссылка для **${server.name}** сохранена.` });
-      return;
-    }
-
-    if (interaction.commandName === "сброс-ссылки") {
-      const serverId = interaction.options.getString("сервер");
-      const server = getServer(serverId);
-      if (!server) {
-        await interaction.reply({ ephemeral: true, content: "Сервер не найден." });
-        return;
-      }
-      clearJoinUrl(serverId);
-      await interaction.reply({ ephemeral: true, content: `Сохранённая ссылка **${server.name}** удалена.` });
+  client.once(Events.ClientReady, async (readyClient) => {
+    console.log(`Discord: ${readyClient.user.tag}`);
+    try {
+      await publishInvite(readyClient);
+    } catch (error) {
+      console.error("Discord: не удалось опубликовать приглашение:", error.message);
     }
   });
 
