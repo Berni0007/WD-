@@ -1,9 +1,9 @@
 import express from "express";
 import { publicUrl } from "./config.js";
-import { joinPage } from "./page.js";
+import { joinPage } from "./pages.js";
 import { liveJoin } from "./tracker.js";
 
-export function createApp() {
+export function createJoinApp() {
   const app = express();
   app.disable("x-powered-by");
 
@@ -24,7 +24,7 @@ export function createApp() {
     }
   });
 
-  app.get(["/join", "/join/1"], async (_req, res) => {
+  app.get("/join", async (_req, res) => {
     let result;
     try {
       result = await liveJoin();
@@ -38,13 +38,14 @@ export function createApp() {
   return app;
 }
 
-export function startWeb() {
+export function startJoinServer() {
   const port = Number(process.env.PORT || 3000);
-  const app = createApp();
+  const app = createJoinApp();
   return new Promise((resolve, reject) => {
     const server = app.listen(port, "0.0.0.0", () => {
-      console.log(`Web: 0.0.0.0:${port}`);
-      console.log(`Join URL: ${publicUrl() ? `${publicUrl()}/join` : "DOMAIN не задан"}`);
+      const url = publicUrl();
+      console.log(`Join: 0.0.0.0:${port}`);
+      console.log(`Join URL: ${url ? `${url}/join` : "PUBLIC_URL не задан"}`);
       resolve(server);
     });
     server.on("error", reject);
