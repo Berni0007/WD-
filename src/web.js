@@ -1,13 +1,35 @@
 import express from "express";
-import { getServer, publicUrl, steamJoinUrl } from "./config.js";
+import { getServer, getServers, publicUrl, steamJoinUrl } from "./config.js";
 import { joinPage } from "./page.js";
+
+function renderJoin(res, server) {
+  if (!server) {
+    res.status(404).type("text/plain").send("Сервер не найден");
+    return;
+  }
+
+  const steamUrl = steamJoinUrl(server);
+  res
+    .status(200)
+    .set("Cache-Control", "no-store")
+    .type("html")
+    .send(
+      joinPage({
+        serverName: server.name,
+        gameId: server.gameId,
+        address: server.address,
+        steamUrl,
+      })
+    );
+}
 
 export function createApp() {
   const app = express();
   app.disable("x-powered-by");
 
+  // Даже обычный домен без /join/1 открывает подключение к первому серверу.
   app.get("/", (_req, res) => {
-    res.status(200).type("text/plain").send("ZARUBA JOIN: OK");
+    renderJoin(res, getServers()[0] || null);
   });
 
   app.get("/health", (_req, res) => {
@@ -15,25 +37,8 @@ export function createApp() {
   });
 
   app.get(["/join/:server", "/join"], (req, res) => {
-    const server = getServer(req.params.server || req.query.server);
-    if (!server) {
-      res.status(404).type("text/plain").send("Сервер не найден");
-      return;
-    }
-
-    const steamUrl = steamJoinUrl(server);
-    res
-      .status(200)
-      .set("Cache-Control", "no-store")
-      .type("html")
-      .send(
-        joinPage({
-          serverName: server.name,
-          gameId: server.gameId,
-          address: server.address,
-          steamUrl,
-        })
-      );
+    const requested = req.params.server || req.query.server || "1";
+    renderJoin(res, getServer(requested));
   });
 
   return app;
