@@ -13,3 +13,9 @@ export async function fetchRconPlayers(server) {
   const data = await rconGet(server, "/v1/players");
   return Array.isArray(data.players) ? data.players : [];
 }
+
+export async function fetchRconServerId(server) {
+  if (!server.rconHost || !server.rconPassword) return "";
+  const data = await rconGet(server, "/v1/server-id");
+  return String(data?.serverId || "").trim();
+}
