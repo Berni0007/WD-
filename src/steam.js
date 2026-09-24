@@ -20,17 +20,37 @@ export async function fetchPlayerSummaries(apiKey, steamIds) {
 
 export function lobbyFromSummary(player, expectedAppId) {
   if (!player?.steamid) return null;
-  if (String(player.gameid || "") !== String(expectedAppId)) return null;
-  if (!player.lobbysteamid) return null;
+  if (expectedAppId && String(player.gameid || "") !== String(expectedAppId)) {
+    return null;
+  }
+
+  const gameserverIp =
+    player.gameserverip && player.gameserverip !== "0.0.0.0:0"
+      ? String(player.gameserverip)
+      : "";
+
+  if (!player.lobbysteamid && !gameserverIp && !player.gameserversteamid) {
+    return null;
+  }
 
   return {
     steamId: String(player.steamid),
-    lobbyId: String(player.lobbysteamid),
-    appId: String(player.gameid || expectedAppId),
+    lobbyId: player.lobbysteamid ? String(player.lobbysteamid) : "",
+    appId: String(player.gameid || expectedAppId || ""),
+    persona: String(player.personaname || ""),
+    gameserverSteamId: player.gameserversteamid
+      ? String(player.gameserversteamid)
+      : "",
+    gameserverIp,
   };
 }
 
 export function toSteamJoinUrl({ appId, lobbyId, steamId }) {
   if (!appId || !lobbyId || !steamId) return "";
   return `steam://joinlobby/${appId}/${lobbyId}/${steamId}`;
+}
+
+export function toSteamConnectUrl(addr) {
+  if (!addr) return "";
+  return `steam://connect/${addr}`;
 }
