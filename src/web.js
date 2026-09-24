@@ -17,10 +17,18 @@ export function createJoinApp() {
         ok: Boolean(result.ok && result.steamUrl),
         reason: result.reason || "nolobby",
         steamUrl: result.steamUrl || "",
+        serverId: result.serverId || "",
+        appId: result.appId || "",
       });
     } catch (error) {
       console.error("Join link:", error.message);
-      res.status(503).json({ ok: false, reason: "error", steamUrl: "" });
+      res.status(503).json({
+        ok: false,
+        reason: "error",
+        steamUrl: "",
+        serverId: "",
+        appId: "",
+      });
     }
   });
 
@@ -32,7 +40,12 @@ export function createJoinApp() {
       console.error("Join page:", error.message);
       result = { ok: false, reason: "error" };
     }
-    res.status(200).set("Cache-Control", "no-store").type("html").send(joinPage(result));
+
+    res
+      .status(200)
+      .set("Cache-Control", "no-store")
+      .type("html")
+      .send(joinPage(result));
   });
 
   return app;
@@ -41,6 +54,7 @@ export function createJoinApp() {
 export function startJoinServer() {
   const port = Number(process.env.PORT || 3000);
   const app = createJoinApp();
+
   return new Promise((resolve, reject) => {
     const server = app.listen(port, "0.0.0.0", () => {
       const url = publicUrl();
@@ -48,6 +62,7 @@ export function startJoinServer() {
       console.log(`Join URL: ${url ? `${url}/join` : "PUBLIC_URL не задан"}`);
       resolve(server);
     });
+
     server.on("error", reject);
   });
 }
