@@ -8,17 +8,12 @@ function escapeHtml(value) {
 
 function statusText(result) {
   const reason = result?.reason;
-
-  if (reason === "server-id") {
-    return "Прямое Steam-подключение недоступно. Join ID сервера найден.";
-  }
+  if (reason === "server-id") return "Прямое Steam-подключение недоступно. Join ID сервера найден.";
   if (reason === "empty") return "На сервере пока нет игроков.";
   if (reason === "rcon-error") return "RCON нового сервера не отвечает.";
   if (reason === "rcon-not-configured") return "RCON не настроен.";
   if (reason === "steam-key-missing") return "Не задан STEAM_API_KEY.";
-  if (reason === "nolobby") {
-    return "Steam не отдаёт Lobby ID или адрес сервера.";
-  }
+  if (reason === "nolobby") return "Steam не отдаёт Lobby ID или адрес сервера.";
   return "Ищем активную Steam-сессию…";
 }
 
@@ -29,6 +24,9 @@ export function joinPage(result) {
   const appId = result?.appId || "1867240";
   const ready = Boolean(result?.ok && steamUrl);
   const hasServerId = Boolean(serverId);
+  const initialAction = ready
+    ? "launch(" + JSON.stringify(steamUrl) + ");"
+    : "poll();";
 
   return `<!doctype html>
 <html lang="ru">
@@ -86,9 +84,7 @@ export function joinPage(result) {
     <section id="idBox" ${hasServerId && !ready ? "" : "hidden"}>
       <div class="code" id="serverId">${escapeHtml(serverId)}</div>
       <button class="btn" id="copyLaunch" type="button">СКОПИРОВАТЬ ID И ЗАПУСТИТЬ WARDOGS</button>
-      <p class="hint">
-        В игре: <b>DEPLOY → JOIN BY ID → Ctrl+V → LOOKUP</b>
-      </p>
+      <p class="hint">В игре: <b>DEPLOY → JOIN BY ID → Ctrl+V → LOOKUP</b></p>
     </section>
   </main>
 
@@ -98,6 +94,7 @@ export function joinPage(result) {
     const idBox = document.getElementById("idBox");
     const serverIdEl = document.getElementById("serverId");
     const copyLaunch = document.getElementById("copyLaunch");
+
     let launched = false;
     let currentServerId = ${JSON.stringify(serverId)};
     const appId = ${JSON.stringify(appId)};
@@ -125,24 +122,25 @@ export function joinPage(result) {
       play.hidden = false;
       idBox.hidden = true;
       status.textContent = "Подключаем к серверу…";
-
       if (launched) return;
       launched = true;
       location.href = url;
     }
 
-    copyLaunch?.addEventListener("click", async () => {
-      if (!currentServerId) return;
+    if (copyLaunch) {
+      copyLaunch.addEventListener("click", async function () {
+        if (!currentServerId) return;
 
-      try {
-        await navigator.clipboard.writeText(currentServerId);
-        status.textContent = "Join ID скопирован. Запускаем WARDOGS…";
-      } catch {
-        status.textContent = "Скопируй Join ID вручную. Запускаем WARDOGS…";
-      }
+        try {
+          await navigator.clipboard.writeText(currentServerId);
+          status.textContent = "Join ID скопирован. Запускаем WARDOGS…";
+        } catch (error) {
+          status.textContent = "Скопируй Join ID вручную. Запускаем WARDOGS…";
+        }
 
-      location.href = "steam://run/" + appId;
-    });
+        location.href = "steam://run/" + appId;
+      });
+    }
 
     async function poll() {
       if (launched) return;
@@ -156,19 +154,16 @@ export function joinPage(result) {
           return;
         }
 
-        if (data.serverId) {
-          showServerId(data.serverId);
-        }
-
+        if (data.serverId) showServerId(data.serverId);
         status.textContent = textFor(data.reason);
-      } catch {
+      } catch (error) {
         status.textContent = "Повторяем проверку подключения…";
       }
 
       setTimeout(poll, 1500);
     }
 
-    ${ready ? `launch(${JSON.stringify(steamUrl)});` : "poll();"}
+    ${initialAction}
   </script>
 </body>
 </html>`;
