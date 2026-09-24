@@ -141,7 +141,7 @@ export function joinPage(result) {
         status.textContent = "Скопируй Join ID вручную. Запускаем WARDOGS…";
       }
 
-      location.href = `steam://run/${appId}`;
+      location.href = "steam://run/" + appId;
     });
 
     async function poll() {
