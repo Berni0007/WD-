@@ -46,3 +46,16 @@ export function serverConfig() {
     rconPassword: clean(process.env.SERVER_1_RCON_PASSWORD),
   };
 }
+
+
+export function warconUrl() {
+  return normalizeWebUrl(process.env.WARCON_URL);
+}
+
+export function warconServerId() {
+  return clean(process.env.WARCON_SERVER_ID);
+}
+
+export function warconApiKey() {
+  return clean(process.env.WARCON_API_KEY);
+}
