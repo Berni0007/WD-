@@ -14,6 +14,7 @@ import { fetchWarconCareer, warconConfigured } from "./warcon.js";
 
 const OLD_TITLE = "ZARUBA · WARDOGS";
 const ROLE_CHANNEL_ID = "1206624451429408778";
+const DOG_CHANNEL_ID = "1553370010158759969";
 const ROLE_PANEL_MARKER = "ZARUBA · ИГРОВЫЕ РОЛИ";
 
 const ROLE_BUTTONS = {
@@ -208,6 +209,14 @@ async function registerDogCommand(client) {
 }
 
 async function handleDogCommand(interaction) {
+  if (interaction.channelId !== DOG_CHANNEL_ID) {
+    await interaction.reply({
+      content: `<#${DOG_CHANNEL_ID}> — канал личной статистики WARDOGS. Используй команду /dog там.`,
+      ephemeral: true,
+    });
+    return;
+  }
+
   const steamId = String(interaction.options.getString("steamid", true) || "").trim();
 
   if (!/^7656119\d{10}$/.test(steamId)) {
