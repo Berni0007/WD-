@@ -10,26 +10,56 @@ import { discordToken, publicUrl, serverConfig } from "./config.js";
 
 const OLD_TITLE = "ZARUBA · WARDOGS";
 
+const ROLE_BUTTONS = {
+  role_wardogs: {
+    roleId: "1546625919706337300",
+    label: "WARDOGS",
+    emoji: "🐺",
+  },
+  role_arma: {
+    roleId: "1334928209543823382",
+    label: "ARMA REFORGER",
+    emoji: "🪖",
+  },
+};
+
 function payload() {
   const server = serverConfig();
   const url = publicUrl();
   const joinUrl = url ? `${url}/join` : "";
 
-  const components = joinUrl
-    ? [
-        new ActionRowBuilder().addComponents(
-          new ButtonBuilder()
-            .setLabel("ИГРАТЬ")
-            .setStyle(ButtonStyle.Link)
-            .setURL(joinUrl)
-        ),
-      ]
-    : [];
+  const components = [];
+
+  if (joinUrl) {
+    components.push(
+      new ActionRowBuilder().addComponents(
+        new ButtonBuilder()
+          .setLabel("ИГРАТЬ")
+          .setStyle(ButtonStyle.Link)
+          .setURL(joinUrl)
+      )
+    );
+  }
+
+  components.push(
+    new ActionRowBuilder().addComponents(
+      new ButtonBuilder()
+        .setCustomId("role_wardogs")
+        .setLabel("WARDOGS")
+        .setEmoji("🐺")
+        .setStyle(ButtonStyle.Secondary),
+      new ButtonBuilder()
+        .setCustomId("role_arma")
+        .setLabel("ARMA REFORGER")
+        .setEmoji("🪖")
+        .setStyle(ButtonStyle.Secondary)
+    )
+  );
 
   return {
     content: joinUrl
-      ? `**ZARUBA · WARDOGS**\nПодключение к **${server.name}**\n${joinUrl}`
-      : "**ZARUBA · WARDOGS**\nВ Bothost не включён домен. Открой вкладку «Домен» и включи веб-домен для порта 3000.",
+      ? `**ZARUBA · WARDOGS**\nПодключение к **${server.name}**\n${joinUrl}\n\n**Выберите игровую роль:**\nНажмите кнопку ниже, чтобы получить роль. Повторное нажатие снимет её.`
+      : "**ZARUBA · WARDOGS**\nВ Bothost не включён домен. Открой вкладку «Домен» и включи веб-домен для порта 3000.\n\n**Выберите игровую роль:**",
     embeds: [],
     components,
     attachments: [],
@@ -54,10 +84,45 @@ async function publish(client) {
 
   if (existing) {
     await existing.edit(payload());
-    console.log("Discord: ссылка обновлена");
+    console.log("Discord: ссылка и кнопки ролей обновлены");
   } else {
     await channel.send(payload());
-    console.log("Discord: ссылка опубликована");
+    console.log("Discord: ссылка и кнопки ролей опубликованы");
+  }
+}
+
+async function handleRoleButton(interaction) {
+  const config = ROLE_BUTTONS[interaction.customId];
+  if (!config || !interaction.guild) return;
+
+  try {
+    const member = await interaction.guild.members.fetch(interaction.user.id);
+    const hasRole = member.roles.cache.has(config.roleId);
+
+    if (hasRole) {
+      await member.roles.remove(config.roleId);
+      await interaction.reply({
+        content: `Роль **${config.label}** снята.`,
+        ephemeral: true,
+      });
+    } else {
+      await member.roles.add(config.roleId);
+      await interaction.reply({
+        content: `Роль **${config.label}** выдана.`,
+        ephemeral: true,
+      });
+    }
+  } catch (error) {
+    console.error(`Discord role ${config.label}:`, error);
+
+    const message =
+      "Не удалось изменить роль. Проверьте, что у бота есть право **Управление ролями**, а роль бота находится выше выдаваемых ролей.";
+
+    if (interaction.replied || interaction.deferred) {
+      await interaction.followUp({ content: message, ephemeral: true }).catch(() => {});
+    } else {
+      await interaction.reply({ content: message, ephemeral: true }).catch(() => {});
+    }
   }
 }
 
@@ -76,6 +141,12 @@ export async function startBot() {
     } catch (error) {
       console.error("Discord publish:", error.message);
     }
+  });
+
+  client.on(Events.InteractionCreate, async (interaction) => {
+    if (!interaction.isButton()) return;
+    if (!ROLE_BUTTONS[interaction.customId]) return;
+    await handleRoleButton(interaction);
   });
 
   await client.login(token);
