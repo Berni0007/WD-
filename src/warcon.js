@@ -31,18 +31,14 @@ export function warconConfigured() {
 
 async function resolveServerId() {
   const configured = warconServerId();
-  if (configured) {
-    try {
-      await apiGet(`/api/servers/${encodeURIComponent(configured)}`);
-      return configured;
-    } catch (error) {
-      if (error?.status !== 404) throw error;
-    }
-  }
-
   const data = await apiGet("/api/servers");
   const servers = Array.isArray(data?.servers) ? data.servers : [];
   if (servers.length === 0) throw new Error("В Warcon API нет доступных серверов");
+
+  if (configured) {
+    const exact = servers.find((server) => String(server?.id || "") === configured);
+    if (exact) return configured;
+  }
 
   const preferred =
     servers.find((server) => /zaruba/i.test(String(server?.name || ""))) ||
