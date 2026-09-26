@@ -1,5 +1,15 @@
 # ZARUBA WARDOGS JOIN
 
+## Назначение проекта
+
+Этот репозиторий отвечает **только** за:
+- кнопку входа на WARDOGS;
+- веб-маршрут `/join`;
+- получение lobby/server данных через RCON + Steam;
+- выдачу и снятие ролей WARDOGS / ARMA REFORGER.
+
+Здесь **нет статистики, SEED и slash-команд статистики**. Они находятся в отдельном репозитории `Berni0007/Bots`.
+
 Из исходного проекта оставлена только цепочка подключения игрока:
 
 **Discord -> /join -> RCON /v1/players -> Steam GetPlayerSummaries -> lobbysteamid -> steam://joinlobby -> WARDOGS**
