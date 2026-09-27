@@ -8,6 +8,7 @@ import {
 } from "discord.js";
 import { discordToken, publicUrl, serverConfig } from "./config.js";
 
+const JOIN_CHANNEL_ID = "1548325425678262313";
 const OLD_TITLE = "ZARUBA · WARDOGS";
 const ROLE_CHANNEL_ID = "1206624451429408778";
 const ROLE_PANEL_MARKER = "ZARUBA · ИГРОВЫЕ РОЛИ";
@@ -75,15 +76,15 @@ function rolePayload() {
 }
 
 async function publishJoin(client) {
-  const channelId = String(process.env.DISCORD_CHANNEL_ID || "").trim();
-  if (!channelId) throw new Error("Не задан DISCORD_CHANNEL_ID");
+  const channelId = JOIN_CHANNEL_ID;
+  console.log(`Discord: канал подключения ${channelId}`);
 
   const channel = await client.channels.fetch(channelId).catch(() => null);
   if (!channel?.isTextBased() || typeof channel.send !== "function") {
     throw new Error("Discord-канал подключения не найден или бот не может писать");
   }
 
-  const recent = await channel.messages.fetch({ limit: 50 }).catch(() => null);
+  const recent = await channel.messages.fetch({ limit: 50 });
   const existing = recent?.find((message) => {
     if (message.author?.id !== client.user.id) return false;
     if (message.embeds?.some((embed) => embed.title === OLD_TITLE)) return true;
