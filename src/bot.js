@@ -167,11 +167,8 @@ export async function startBot() {
   client.once(Events.ClientReady, async (ready) => {
     console.log(`Discord: ${ready.user.tag}`);
 
-    try {
-      await publishJoin(ready);
-    } catch (error) {
-      console.error("Discord join publish:", error.message);
-    }
+    // Join publication temporarily disabled at the owner's request.
+    console.log("Discord: публикация кнопки подключения отключена");
 
     try {
       await publishRoles(ready);
