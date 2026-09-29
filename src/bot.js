@@ -24,6 +24,11 @@ const ROLE_BUTTONS = {
     label: "ARMA REFORGER",
     emoji: "🪖",
   },
+  role_testteam: {
+    roleId: "1554529769939533946",
+    label: "TestTeam",
+    emoji: "🧪",
+  },
 };
 
 function joinPayload() {
@@ -55,7 +60,7 @@ function joinPayload() {
 function rolePayload() {
   return {
     content:
-      `**${ROLE_PANEL_MARKER}**\nВыберите игру, новости по которой хотите получать.\nНажмите кнопку ниже, чтобы получить роль. Повторное нажатие снимет её.`,
+      `**${ROLE_PANEL_MARKER}**\nВыберите нужную роль.\nНажмите кнопку ниже, чтобы получить роль. Повторное нажатие снимет её.`,
     embeds: [],
     components: [
       new ActionRowBuilder().addComponents(
@@ -68,6 +73,11 @@ function rolePayload() {
           .setCustomId("role_arma")
           .setLabel("ARMA REFORGER")
           .setEmoji("🪖")
+          .setStyle(ButtonStyle.Secondary),
+        new ButtonBuilder()
+          .setCustomId("role_testteam")
+          .setLabel("TestTeam")
+          .setEmoji("🧪")
           .setStyle(ButtonStyle.Secondary)
       ),
     ],
