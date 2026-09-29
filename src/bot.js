@@ -12,6 +12,8 @@ const JOIN_CHANNEL_ID = "1548325425678262313";
 const OLD_TITLE = "ZARUBA · WARDOGS";
 const ROLE_CHANNEL_ID = "1206624451429408778";
 const ROLE_PANEL_MARKER = "ZARUBA · ИГРОВЫЕ РОЛИ";
+const TESTTEAM_CHANNEL_ID = "1355892814004879490";
+const TESTTEAM_PANEL_MARKER = "ZARUBA · TESTTEAM";
 
 const ROLE_BUTTONS = {
   role_wardogs: {
@@ -85,6 +87,24 @@ function rolePayload() {
   };
 }
 
+function testTeamPayload() {
+  return {
+    content:
+      `**${TESTTEAM_PANEL_MARKER}**\nХотите участвовать в тестировании наших разработок?\nНажмите кнопку ниже, чтобы получить роль **TestTeam**. Повторное нажатие снимет её.`,
+    embeds: [],
+    components: [
+      new ActionRowBuilder().addComponents(
+        new ButtonBuilder()
+          .setCustomId("role_testteam")
+          .setLabel("TestTeam")
+          .setEmoji("🧪")
+          .setStyle(ButtonStyle.Secondary)
+      ),
+    ],
+    attachments: [],
+  };
+}
+
 async function publishJoin(client) {
   const channelId = JOIN_CHANNEL_ID;
   console.log(`Discord: канал подключения ${channelId}`);
@@ -128,6 +148,27 @@ async function publishRoles(client) {
   } else {
     await channel.send(rolePayload());
     console.log("Discord: панель ролей опубликована");
+  }
+}
+
+async function publishTestTeam(client) {
+  const channel = await client.channels.fetch(TESTTEAM_CHANNEL_ID).catch(() => null);
+  if (!channel?.isTextBased() || typeof channel.send !== "function") {
+    throw new Error("Discord-канал TestTeam не найден или бот не может писать");
+  }
+
+  const recent = await channel.messages.fetch({ limit: 50 }).catch(() => null);
+  const existing = recent?.find((message) => {
+    if (message.author?.id !== client.user.id) return false;
+    return String(message.content || "").includes(TESTTEAM_PANEL_MARKER);
+  });
+
+  if (existing) {
+    await existing.edit(testTeamPayload());
+    console.log("Discord: панель TestTeam обновлена");
+  } else {
+    await channel.send(testTeamPayload());
+    console.log("Discord: панель TestTeam опубликована");
   }
 }
 
@@ -184,6 +225,12 @@ export async function startBot() {
       await publishRoles(ready);
     } catch (error) {
       console.error("Discord roles publish:", error.message);
+    }
+
+    try {
+      await publishTestTeam(ready);
+    } catch (error) {
+      console.error("Discord TestTeam publish:", error.message);
     }
   });
 
